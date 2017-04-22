@@ -15,7 +15,12 @@ Including another URLconf
 """
 from django.conf.urls import url
 from django.contrib import admin
-
+from TwittTrends.backend import application
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
+    url(r'^json/(?P<keyword>\w{0,50})/$', application.get_query),
+    url(r'^geo/(?P<lat>-?\d*\.{0,1}\d+)/(?P<long>-?\d*\.{0,1}\d+)/$', application.get_geo),
+    url(r'^final/$', application.sns_request),
+    # url(r'^update/$', application.update),
+    url(r'', application.display)
 ]

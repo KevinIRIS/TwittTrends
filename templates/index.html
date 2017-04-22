@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>TweetMap</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<style>
+/* Always set the map height explicitly to define the size of the div
+ * element that contains the map. */
+._select{
+  width:100px;
+  height:30px;
+  border:1px solid #FFF;
+  background:#FFF;
+  outline:none;
+  box-shadow: rgba(0, 0, 0, 0.298039) 0px 1px 4px -1px;
+}
+#map {
+	height: 100%;
+}
+/* Optional: Makes the sample page fill the window. */
+html, body {
+	height: 100%;
+	margin: 0;
+	padding: 0;
+}
+</style>
+</head>
+<body>
+<div id="selectOption" class = "threeDLook" align="left" id="hover" style="position: absolute; left:10px; top:60px; z-index:20; width: 100px;background:white;">
+	<select id ="changeOption" name="options" onchange="searchKeyword(this.value)" class = "_select">
+		<option value="defaultOpttion">Please select</option>
+		<option value="Texas">Texas</option>
+		<option value="Jayz">Jayz</option>
+		<option value="Eminem">Eminem</option>
+		<option value="is">is</option>
+		<option value="NYC">NYC</option>
+		<option value="Donald">Donald</option>
+	</select>
+</div>
+
+<div id="map"></div>
+<script>
+var parseJSONTimeoutVar;
+var update_timeout = null;
+$('#textBox').submit(function () {
+	return false;
+});
+
+var map;
+var url;
+var markers = [];
+function setMapOnAll(map) {
+	for (var i = 0; i < markers.length; i++) {
+		markers[i].setMap(map);
+	}
+}
+function clearMarkers() {
+	setMapOnAll(null);
+}
+function deleteMarkers() {
+	clearMarkers();
+	markers = [];
+}
+function parseJSON(data, status, xhr){
+    console.log("parse");
+    for (var i = 0; i < data.total; i++)
+	{
+		if (data.hits[i] && data.hits[i]._source && data.hits[i]._source.location)
+		{
+            var longitude = data.hits[i]._source.location['lon'];
+			var latitude = data.hits[i]._source.location['lat'];
+			var latLng = new google.maps.LatLng(latitude, longitude);
+			var sentiment = data.hits[i]._source.sentiment
+            mapObj = {'positive':'http://icons.iconarchive.com/icons/oxygen-icons.org/oxygen/32/Emotes-face-smile-big-icon.png',
+                'negative':'http://icons.iconarchive.com/icons/oxygen-icons.org/oxygen/32/Emotes-face-sad-icon.png',
+                'neutral':'http://icons.iconarchive.com/icons/oxygen-icons.org/oxygen/32/Emotes-face-plain-icon.png'}
+			var marker = new google.maps.Marker({
+				position: latLng,
+				map: map,
+				id: i,
+                icon: mapObj[sentiment],
+                text: "<b>" + data.hits[i]._source.username + "</b>: &quot;" + data.hits[i]._source.content + "&quot;  - <i>" + (new Date(data.hits[i]._source.timestamp* 1000)).toGMTString() + "</i>"
+			});
+			marker.addListener('click', function() {
+				map.setZoom(8);
+				map.setCenter(this.getPosition());
+			});
+			marker.addListener('mouseover', function() {
+				var infowindow = new google.maps.InfoWindow({
+					content: this.text
+				});
+				infowindow.open(map, this);
+				this.addListener('mouseout', function() {
+					infowindow.close();
+				});
+			});
+			markers.push(marker);
+		}
+	}
+}
+function sendKeywordRequest(keyword)
+{
+	url = 'json/'.concat(keyword).concat('/');
+	var data;
+	deleteMarkers();
+	$.getJSON(url, data, parseJSON); //callback
+	//parseJSONTimeoutVar = setTimeout(function(){sendKeywordRequest(keyword);},10000);
+}
+function searchKeyword(keyword)
+{
+	//clearTimeout(parseJSONTimeoutVar);
+	sendKeywordRequest(keyword)
+}
+function sendLatLongRequest(latitude, longitude)
+{
+    $('#changeOption').val('defaultOpttion').change();
+	url = 'geo/'.concat(latitude).concat('/').concat(longitude).concat('/');
+	var data;
+	deleteMarkers();
+	$.getJSON(url, data, parseJSON); //callback
+	//parseJSONTimeoutVar = setTimeout(function(){sendLatLongRequest(latitude, longitude);},10000);
+}
+function searchaLatLong(latitude, longitude)
+{
+	//clearTimeout(parseJSONTimeoutVar);
+
+	sendLatLongRequest(latitude, longitude);
+}
+function update() {
+    $(document).ready(function () {
+        $.get("update/").success(function (data) {
+            $('#test').append(data);
+        })
+    });
+}
+function initMap() {
+	map = new google.maps.Map(document.getElementById('map'), {
+		zoom: 4,
+		center: new google.maps.LatLng(40.694439, -73.986536),
+		mapTypeId: 'terrain'
+	});
+	url = 'json//';
+	google.maps.event.addListener(map, 'click', function(event){
+		latLong = event.latLng;
+		update_timeout = setTimeout(function(){
+		  coordinates = event.latLng;
+		  latitude = coordinates['lat']();
+		  longitude = coordinates['lng']();
+		  this.map.setCenter(latLong);
+		  this.map.setZoom(6);
+		  sendLatLongRequest(latitude, longitude);
+    	}, 200);
+	});
+	//Ignore double clicks
+	google.maps.event.addListener(map, 'dblclick', function(event) {
+    	clearTimeout(update_timeout);
+	});
+	var data;
+	deleteMarkers();
+	$.getJSON(url, data, parseJSON);
+}
+</script>
+<script async defer
+src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA86DftYrnOQAiyLBB2HDPC3JMZOFLG55s&callback=initMap">
+</script>
+</body>
+</html>
