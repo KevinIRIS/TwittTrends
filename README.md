@@ -1,3 +1,4 @@
+TwittTrends
 Idea:
 
 There is a thread running in background and using Twitter API to fetch posts. Send the data to SQS, then use a thread pool to assign thread to extract message from SQS and use IBM API analyse the sentiment. publish the message to sns, sns notifies the endpoint to store the data to ES.Based on Django framework, build a webpage and send request to ElasticSearch to get data.
